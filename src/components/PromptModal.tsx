@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   MediaCategory,
   EducationLevel,
@@ -26,6 +26,7 @@ import {
   ILLUSTRATION_STYLES,
   MODUL_DETAILED_COMPONENTS,
   MODUL_TIME_ALLOCATIONS_BY_LEVEL,
+  buildAutoLearningObjectives,
 } from '../data/curriculumData';
 import { APP_THEMES } from '../data/themes';
 import { LkpdWorkbookView } from './LkpdWorkbookView';
@@ -103,6 +104,11 @@ export const PromptModal: React.FC<PromptModalProps> = ({
   const [isCanvaLocked, setIsCanvaLocked] = useState<boolean>(isPresentasi);
 
   const [learningObjectives, setLearningObjectives] = useState<string>('');
+  const [learningObjMode, setLearningObjMode] = useState<'auto' | 'manual'>('auto');
+  const [selectedObjPresetId, setSelectedObjPresetId] = useState<string>('simple');
+  const [aiGeneratedObjectives, setAiGeneratedObjectives] = useState<string[]>([]);
+  const [isGeneratingObjectives, setIsGeneratingObjectives] = useState<boolean>(false);
+
   const [pancasilaDimensions, setPancasilaDimensions] = useState<string[]>([
     'Bernalar Kritis',
     'Kreatif',
@@ -244,6 +250,26 @@ export const PromptModal: React.FC<PromptModalProps> = ({
     ];
   }, [educationLevel, subject]);
 
+  // Automatic Learning Objectives (Tujuan Pembelajaran) synced with Level, Class, Subject, Topic & LKPD/Media Type
+  const autoObjectivePresets = useMemo(() => {
+    const activeActivityLabel = isLkpd ? lkpdType : category.title;
+    return buildAutoLearningObjectives(
+      educationLevel,
+      gradeClass,
+      subject,
+      topic || category.defaultTopic,
+      activeActivityLabel
+    );
+  }, [educationLevel, gradeClass, subject, topic, lkpdType, isLkpd, category.title, category.defaultTopic]);
+
+  useEffect(() => {
+    if (learningObjMode === 'auto' && autoObjectivePresets.length > 0) {
+      const matched =
+        autoObjectivePresets.find((p) => p.id === selectedObjPresetId) || autoObjectivePresets[0];
+      setLearningObjectives(matched.text);
+    }
+  }, [learningObjMode, autoObjectivePresets, selectedObjPresetId]);
+
   // Handle phase change and auto-select appropriate class, subject, and Modul Ajar time allocation
   const handleLevelChange = (lvl: EducationLevel) => {
     setEducationLevel(lvl);
@@ -326,6 +352,62 @@ Format jawaban WAJIB HANYA berupa JSON string array tanpa tanda kutip markdown, 
       ]);
     } finally {
       setIsGeneratingTopics(false);
+    }
+  };
+
+  // Generate custom Learning Objectives (Tujuan Pembelajaran) using Server-Side Gemini AI
+  const handleGenerateObjectivesWithAI = async () => {
+    setIsGeneratingObjectives(true);
+    try {
+      const activeTopic = (topic || category.defaultTopic).trim();
+      const prompt = `Susunkan 4 pilihan rumusan Tujuan Pembelajaran (TP) Kurikulum Merdeka yang jelas, sesuai materi, sederhana, dan mudah dipahami peserta didik ${gradeClass} (${educationLevel}) pada mata pelajaran "${subject}" dengan materi "${activeTopic}"${isLkpd ? ` untuk kegiatan ${lkpdType}` : ''}.
+Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pembelajaran tanpa markdown, contoh persis:
+["Peserta didik mampu ...", "Melalui kegiatan mengamati gambar, peserta didik mampu ...", "Peserta didik dapat menjelaskan ...", "Melalui diskusi sederhana, peserta didik mampu ..."]`;
+
+      const response = await fetch('/api/gemini/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server status ${response.status}`);
+      }
+
+      const data = await response.json();
+      let text = (data.text || '').trim();
+      text = text.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleaned = parsed.map((item) => String(item).trim()).filter(Boolean);
+          if (cleaned.length > 0) {
+            setAiGeneratedObjectives(cleaned.slice(0, 4));
+            setLearningObjMode('manual');
+            setLearningObjectives(cleaned[0]);
+            return;
+          }
+        }
+      } catch {}
+
+      const lines = text
+        .split('\n')
+        .map((l: string) => l.replace(/^[-*0-9.)"'\s]+/, '').replace(/["',]+$/, '').trim())
+        .filter((l: string) => l.length > 10);
+
+      if (lines.length > 0) {
+        setAiGeneratedObjectives(lines.slice(0, 4));
+        setLearningObjMode('manual');
+        setLearningObjectives(lines[0]);
+      } else {
+        setAiGeneratedObjectives(autoObjectivePresets.map((p) => p.text));
+      }
+    } catch {
+      const fallbacks = autoObjectivePresets.map((p) => p.text);
+      setAiGeneratedObjectives(fallbacks);
+    } finally {
+      setIsGeneratingObjectives(false);
     }
   };
 
@@ -1192,6 +1274,191 @@ Format jawaban WAJIB HANYA berupa JSON string array tanpa tanda kutip markdown, 
                         })}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Tujuan Pembelajaran: Otomatis & Manual */}
+                  <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" style={{ color: theme.primaryHex }} />
+                          <span>Tujuan Pembelajaran:</span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            ({learningObjMode === 'auto' ? 'Tersusun Otomatis' : 'Mode Edit Manual'})
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleGenerateObjectivesWithAI}
+                          disabled={isGeneratingObjectives}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-xs transition active:scale-95 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {isGeneratingObjectives ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Wand2 className="w-3.5 h-3.5 text-amber-200" />
+                          )}
+                          <span>
+                            {isGeneratingObjectives ? 'Menyusun TP...' : 'Susun TP dengan AI'}
+                          </span>
+                        </button>
+
+                        <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-[11px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLearningObjMode('auto');
+                              const matched =
+                                autoObjectivePresets.find((p) => p.id === selectedObjPresetId) ||
+                                autoObjectivePresets[0];
+                              if (matched) {
+                                setLearningObjectives(matched.text);
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
+                              learningObjMode === 'auto'
+                                ? 'bg-slate-800 text-white shadow-2xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            Otomatis
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLearningObjMode('manual')}
+                            className={`px-2.5 py-1 rounded-md transition whitespace-nowrap ${
+                              learningObjMode === 'manual'
+                                ? 'bg-slate-800 text-white shadow-2xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            Manual
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <textarea
+                      rows={learningObjectives.includes('\n') ? 3 : 2}
+                      value={learningObjectives}
+                      onChange={(e) => {
+                        setLearningObjMode('manual');
+                        setLearningObjectives(e.target.value);
+                      }}
+                      placeholder="Tulis tujuan pembelajaran secara manual di sini, atau pilih mode Otomatis di atas..."
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-medium text-slate-800 leading-relaxed focus:outline-hidden"
+                    />
+
+                    {learningObjMode === 'manual' && (
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>
+                          Anda sedang dalam mode <strong>Manual</strong>. Ketik bebas sesuai kebutuhan kelas.
+                        </span>
+                        <div className="flex items-center gap-2 font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setLearningObjectives('')}
+                            className="text-rose-600 hover:underline whitespace-nowrap"
+                          >
+                            Kosongkan
+                          </button>
+                          <span>·</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLearningObjMode('auto');
+                              if (autoObjectivePresets[0]) {
+                                setLearningObjectives(autoObjectivePresets[0].text);
+                              }
+                            }}
+                            className="hover:underline whitespace-nowrap"
+                            style={{ color: theme.primaryHex }}
+                          >
+                            Kembalikan ke Otomatis
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pilihan Rumusan Tujuan Pembelajaran Otomatis */}
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-extrabold text-slate-700 block">
+                        Pilihan Cepat Rumusan Tujuan Pembelajaran Otomatis ({gradeClass}):
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {autoObjectivePresets.map((preset) => {
+                          const isChosen =
+                            (learningObjMode === 'auto' && selectedObjPresetId === preset.id) ||
+                            learningObjectives === preset.text;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedObjPresetId(preset.id);
+                                setLearningObjMode('auto');
+                                setLearningObjectives(preset.text);
+                              }}
+                              className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between gap-1 ${
+                                isChosen
+                                  ? 'bg-emerald-50/90 border-emerald-500 text-emerald-950 shadow-2xs'
+                                  : 'bg-slate-50/80 hover:bg-slate-100 border-slate-200 text-slate-700'
+                              }`}
+                            >
+                              <div className="text-[11px] font-extrabold flex items-center justify-between gap-1">
+                                <span>
+                                  {isChosen ? '✓ ' : ''}
+                                  {preset.label}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 line-clamp-2 leading-snug">
+                                {preset.text}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {aiGeneratedObjectives.length > 0 && (
+                      <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-extrabold text-emerald-950 flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Rekomendasi Tujuan Pembelajaran AI:</span>
+                          </span>
+                          <span className="text-[10px] text-emerald-700 font-semibold">
+                            Klik untuk menggunakan
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {aiGeneratedObjectives.map((aiObj, idx) => {
+                            const isPicked = learningObjectives === aiObj;
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setLearningObjMode('manual');
+                                  setLearningObjectives(aiObj);
+                                }}
+                                className={`w-full text-xs p-2 rounded-lg border text-left transition ${
+                                  isPicked
+                                    ? 'bg-emerald-600 text-white font-bold border-emerald-600 shadow-xs'
+                                    : 'bg-white hover:bg-emerald-100/70 text-slate-800 border-emerald-200'
+                                }`}
+                              >
+                                {isPicked ? '✓ ' : '+ '}
+                                {aiObj}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2105,6 +2372,7 @@ Format jawaban WAJIB HANYA berupa JSON string array tanpa tanda kutip markdown, 
                 subject={subject}
                 educationLevel={educationLevel}
                 gradeClass={gradeClass}
+                learningObjectives={learningObjectives}
                 lkpdType={lkpdType}
                 lkpdPageCount={lkpdPageCount}
                 lkpdQuestionCount={lkpdQuestionCount}

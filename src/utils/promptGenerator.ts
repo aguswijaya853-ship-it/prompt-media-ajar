@@ -19,11 +19,8 @@ Tugas Anda adalah membuat LKPD bergambar lengkap berdasarkan materi dan jenis/be
 SPESIFIKASI DESAIN
 Ukuran kertas : A4 (21 cm × 29,7 cm)
 Orientasi : Portrait
-Jumlah halaman : [ TULIS JUMLAH HALAMAN DISINI, misal: 2 Halaman A4 ]
-Jumlah soal / butir tugas : [ TULIS JUMLAH SOAL DISINI, misal: 10 Soal ]
 Layout : rapi, proporsional, dan siap cetak
 Gaya desain : ramah anak dan menarik
-Gaya seni ilustrasi : [ TULIS GAYA SENI ILUSTRASI DISINI ]
 Warna : cerah, pastel, dan edukatif
 Sesuaikan dengan jenjang : TK/SD/SMP/SMA 
 Sisakan ruang untuk jawaban siswa
@@ -72,9 +69,9 @@ Nilai :
 
 TUGAS ANDA
 Berdasarkan materi dan jenis LKPD yang dipilih:
-Menyusun kegiatan LKPD sesuai bentuk dan jumlah halaman yang diminta
-Membuat tepat sejumlah soal/tugas berbasis gambar atau aktivitas sesuai jumlah soal yang ditentukan
-Membuat ilustrasi yang relevan dengan materi sesuai gaya seni ilustrasi terpilih
+Menyusun kegiatan LKPD sesuai bentuk yang diminta
+Membuat soal/tugas berbasis gambar atau aktivitas
+Membuat ilustrasi yang relevan dengan materi
 Menyesuaikan tingkat kesulitan dengan jenjang
 Menggunakan bahasa sederhana, komunikatif, dan mudah dipahami siswa
 
@@ -112,9 +109,8 @@ menarik,
 sesuai usia siswa,
 dan memiliki ruang jawaban.
 
-LATIHAN & PENOMORAN SOAL
-Susun soal latihan sebanyak jumlah soal yang ditentukan secara proporsional di seluruh halaman LKPD.
-Buat soal yang:
+LATIHAN (Opsional)
+Buat soal tambahan yang:
 relevan dengan materi,
 bervariasi,
 tidak terlalu sulit,
@@ -133,7 +129,7 @@ Apa yang masih ingin kamu pelajari?
 
 KETENTUAN ILUSTRASI
 Gunakan ilustrasi:
-sesuai gaya seni yang dipilih (misal: kartun edukatif, anime, 2D flat vector, 3D render, cat air, karton craft, dll.),
+kartun edukatif,
 warna cerah dan menarik,
 tidak terlalu ramai,
 mendukung pemahaman materi,
@@ -141,10 +137,10 @@ dan diletakkan dekat soal atau aktivitas terkait.
 
 OUTPUT
 Hasil akhir harus:
-berupa LKPD lengkap siap cetak sesuai jumlah halaman dan jumlah soal yang diminta,
+berupa LKPD lengkap siap cetak,
 full color,
 rapi dan profesional,
-menggunakan heading dan penomoran halaman yang jelas,
+menggunakan heading yang jelas,
 memiliki perpaduan teks dan ilustrasi yang seimbang,
 dan cocok digunakan dalam pembelajaran di kelas maupun tugas rumah.`;
 
@@ -279,92 +275,180 @@ ${detailedList}
     }
 
     case 'lkpd': {
-      const selectedLkpdType = data.lkpdType || customAnswers.lkpdStyle || 'LKPD Eksperimen';
+      const selectedLkpdType = data.lkpdType || customAnswers.lkpdStyle || '[ TULIS DISINI ]';
       const pageCount = data.lkpdPageCount && data.lkpdPageCount > 0 ? data.lkpdPageCount : 2;
       const questionCount = data.lkpdQuestionCount && data.lkpdQuestionCount > 0 ? data.lkpdQuestionCount : 10;
-      const pictureActs = data.pictureActivities && data.pictureActivities.length > 0
-        ? data.pictureActivities.join(', ')
-        : 'Mengamati gambar, Memberi label pada gambar, Mengisi jawaban';
-      const exercises = data.includeExercises && data.includeExercises.length > 0
-        ? data.includeExercises.join(', ')
-        : 'Pilihan Ganda, Isian Singkat';
-      const styleArt = data.illustrationStyle || 'Kartun Edukatif';
-      const materiValue = topic && topic.trim()
-        ? `${topic.trim()}${subject ? ` (Mata Pelajaran: ${subject} - ${data.gradeLevel || levelLabel})` : ''}`
-        : '[ TULIS DISINI ]';
-      const tujuanValue = learningObjectives && learningObjectives.trim()
-        ? learningObjectives.trim()
-        : `Peserta didik mampu memahami dan menerapkan konsep "${topic || 'materi pembelajaran'}" secara aktif, kritis, dan kontekstual melalui aktivitas bergambar.`;
-      const jenjangValue = data.gradeLevel ? `${data.gradeLevel} (${levelLabel})` : 'TK/SD/SMP/SMA';
+      const pictureActs =
+        data.pictureActivities && data.pictureActivities.length > 0
+          ? data.pictureActivities.join(', ')
+          : '';
+      const exercises =
+        data.includeExercises && data.includeExercises.length > 0
+          ? data.includeExercises.join(', ')
+          : '';
+      const styleArt = (data.illustrationStyle || 'Kartun Edukatif').trim();
+      const materiValue =
+        topic && topic.trim()
+          ? `${topic.trim()}${subject ? ` (Mata Pelajaran: ${subject})` : ''}`
+          : '[ TULIS DISINI ]';
+      const tujuanValue =
+        learningObjectives && learningObjectives.trim()
+          ? learningObjectives.trim()
+          : '[ TULIS DISINI ]';
+      const jenjangValue = data.gradeLevel
+        ? `${data.gradeLevel} (${levelLabel})`
+        : 'TK/SD/SMP/SMA';
       const kelasValue = data.gradeLevel || '________________________';
-      const extraNote = additionalNotes && additionalNotes.trim()
-        ? `\nCATATAN KHUSUS GURU\n${additionalNotes.trim()}\n`
-        : '';
+      const extraNote =
+        additionalNotes && additionalNotes.trim()
+          ? `\n\nCATATAN TAMBAHAN\n${additionalNotes.trim()}`
+          : '';
 
-      return `Anda adalah desainer pembelajaran profesional, ahli visual edukasi, dan creator LKPD interaktif modern. Tugas Anda adalah buat gambar dan konten lengkap dengan menyusun LKPD bergambar yang menarik, modern, estetik, dan nyaman digunakan siswa.
+      return `Anda adalah desainer pembelajaran profesional, ahli visual edukasi, dan creator LKPD interaktif modern. Tugas Anda adalah buat gambar dengan mengubah isi LKPD yang saya lampirkan menjadi LKPD bergambar yang lebih menarik, modern, estetik, dan nyaman digunakan siswa tanpa mengurangi isi materi asli sedikit pun.
 
-Buat tampilan LKPD dalam format A4 portrait sebanyak ${pageCount} Halaman dengan desain full color yang clean, edukatif, student friendly, dan profesional seperti workbook sekolah modern. Gunakan tata letak yang rapi dengan perpaduan teks, gambar, dan ruang kosong yang seimbang agar tidak terlalu padat dan tetap mudah dibaca siswa.
+Buat tampilan LKPD dalam format A4 portrait dengan desain full color yang clean, edukatif, student friendly, dan profesional seperti workbook sekolah modern. Gunakan tata letak yang rapi dengan perpaduan teks, gambar, dan ruang kosong yang seimbang agar tidak terlalu padat dan tetap mudah dibaca siswa.
 
-Tambahkan ilustrasi edukatif bergaya "${styleArt}" yang relevan dengan materi, ikon modern, elemen visual sederhana, highlight box, header menarik, dan variasi desain pada setiap halaman (Halaman 1 s.d. Halaman ${pageCount}) agar tidak monoton. Jika terdapat soal cerita, tambahkan ilustrasi kontekstual. Jika terdapat langkah kegiatan, ubah menjadi tampilan step visual yang lebih interaktif. Jika terdapat tabel atau latihan, ubah menjadi desain yang lebih modern dan menarik namun tetap jelas dibaca.
+Tambahkan ilustrasi edukatif yang relevan dengan materi, ikon modern, elemen visual sederhana, highlight box, header menarik, dan variasi desain pada setiap halaman agar tidak monoton. Jika terdapat soal cerita, tambahkan ilustrasi kontekstual. Jika terdapat langkah kegiatan, ubah menjadi tampilan step visual yang lebih interaktif. Jika terdapat tabel atau latihan, ubah menjadi desain yang lebih modern dan menarik namun tetap jelas dibaca.
 
-SPESIFIKASI DESAIN & VOLUME LKPD
+Sesuaikan desain, ilustrasi, dan tata letak dengan jenis aktivitas pada LKPD, sehingga setiap aktivitas terlihat lebih interaktif, kontekstual, dan sesuai dengan karakter pembelajaran yang digunakan.
+
+Gunakan gaya visual modern, fun learning, semi infografis, dan workbook edukasi premium. Hindari desain terlalu ramai, seperti poster, atau ornamen berlebihan. Pastikan hasil akhir tetap fokus sebagai media belajar yang fungsional sekaligus estetik.
+
+Hasil akhir harus langsung berupa desain LKPD lengkap yang siap cetak, beresolusi tinggi, dan terlihat seperti workbook pendidikan profesional.
+
+Buat Gambar
+Anda berperan sebagai guru profesional, perancang LKPD, dan ilustrator pendidikan yang mampu membuat LKPD menarik, edukatif, dan sesuai dengan karakter peserta didik.
+Tugas Anda adalah membuat LKPD bergambar lengkap berdasarkan materi dan jenis/bentuk LKPD yang ditentukan oleh pengguna.
+
+SPESIFIKASI DESAIN
 Ukuran kertas : A4 (21 cm × 29,7 cm)
 Orientasi : Portrait
-Jumlah Halaman LKPD : ${pageCount} Halaman A4 Penuh (Susun rapi per halaman: Halaman 1 s.d. Halaman ${pageCount})
-Jumlah Soal / Butir Tugas : Tepat ${questionCount} Butir Soal / Aktivitas Terstruktur
+Jumlah halaman : ${pageCount} Halaman A4
+Jumlah soal : ${questionCount} Soal
 Layout : rapi, proporsional, dan siap cetak
-Gaya seni ilustrasi : ${styleArt}
-Warna : cerah, pastel, harmonis, dan edukatif
+Gaya desain : ramah anak dan menarik
+Warna : cerah, pastel, dan edukatif
 Sesuaikan dengan jenjang : ${jenjangValue}
-Sisakan ruang tulis jawaban siswa yang memadai pada setiap soal
+Sisakan ruang untuk jawaban siswa
+Gunakan ilustrasi edukatif seperlunya
 Mudah dibaca dan hindari desain terlalu ramai
 
 MATERI PEMBELAJARAN
 ISI MATERI DI SINI :
 ${materiValue}
 
-JENIS / BENTUK LKPD YANG DIINGINKAN :
+JENIS / BENTUK LKPD
+Pilih atau isi sesuai kebutuhan, misalnya:
+LKPD Observasi
+LKPD Eksperimen
+LKPD Eksplorasi
+LKPD Berbasis Gambar
+LKPD Cerita Bergambar
+LKPD Mencocokkan
+LKPD Menjodohkan
+LKPD Pilihan Ganda
+LKPD Benar/Salah
+LKPD Isian
+LKPD Studi Kasus
+LKPD Investigasi
+LKPD Pemecahan Masalah (HOTS)
+LKPD Berbasis Proyek (PjBL)
+LKPD Diskusi Kelompok
+LKPD Analisis Data
+LKPD Refleksi
+LKPD Diagnostik
+LKPD Pengayaan
+LKPD Remedial
+LKPD Proyek
+LKPD Campuran
+JENIS LKPD YANG DIINGINKAN :
 ${selectedLkpdType}
 
-IDENTITAS LKPD (Pada Halaman 1)
+
+
+IDENTITAS LKPD
 Nama : ________________________
 Kelas : ${kelasValue}
 Tanggal : ________________________
 Nilai : 
 
-TUGAS ANDA
-Berdasarkan materi, jenis LKPD, jumlah halaman (${pageCount} halaman), dan jumlah soal (${questionCount} soal) yang dipilih:
-1. Membagi alur konten secara proporsional ke dalam ${pageCount} halaman A4 (cantumkan penanda jelas [HALAMAN 1 dari ${pageCount}] s.d. [HALAMAN ${pageCount} dari ${pageCount}]).
-2. Menyusun kegiatan LKPD sesuai bentuk "${selectedLkpdType}".
-3. Membuat tepat ${questionCount} butir soal/tugas bernomor 1 sampai ${questionCount} yang berbasis gambar, tabel pengamatan, atau aktivitas kontekstual.
-4. Membuat deskripsi/visual ilustrasi bergaya "${styleArt}" yang relevan dengan materi di dekat aktivitas terkait.
-5. Menyesuaikan tingkat kesulitan dan kosakata dengan jenjang ${jenjangValue}.
 
-TUJUAN PEMBELAJARAN
+TUGAS ANDA
+Berdasarkan materi dan jenis LKPD yang dipilih:
+Menyusun kegiatan LKPD sesuai bentuk yang diminta
+Membuat soal/tugas berbasis gambar atau aktivitas
+Membuat ilustrasi yang relevan dengan materi
+Menyesuaikan tingkat kesulitan dengan jenjang
+Menggunakan bahasa sederhana, komunikatif, dan mudah dipahami siswa
+
+TUJUAN PEMBELAJARAN (Opsional)
 ${tujuanValue}
+Tuliskan tujuan pembelajaran yang:
+jelas,
+sesuai materi,
+sederhana,
+dan mudah dipahami peserta didik.
 
 PETUNJUK PENGERJAAN
-Buat petunjuk pengerjaan yang sederhana, jelas, bertahap, dan mudah dipahami siswa (3–5 langkah).
+Buat petunjuk pengerjaan yang:
+sederhana,
+jelas,
+bertahap,
+dan mudah dipahami siswa.
+Gunakan maksimal 3–5 langkah.
 
-KEGIATAN BERGAMBAR INTERAKTIF
-Sesuaikan dengan jenis LKPD (${selectedLkpdType}).
-Aktivitas Utama yang Disertakan: ${pictureActs}
-Setiap aktivitas harus interaktif, menarik, sesuai usia siswa, dan memiliki ruang jawaban yang jelas.
+KEGIATAN BERGAMBAR
+Sesuaikan dengan jenis LKPD yang dipilih.${pictureActs ? `\nAktivitas yang diutamakan : ${pictureActs}` : ''}
+Contoh aktivitas:
+Mengamati gambar
+Mencocokkan gambar
+Mengisi jawaban
+Memberi label pada gambar
+Mengurutkan gambar
+Menghubungkan konsep dengan ilustrasi
+Mewarnai (khusus jenjang tertentu)
+Diskusi sederhana
+Bermain sambil belajar
+Setiap aktivitas harus:
+interaktif,
+menarik,
+sesuai usia siswa,
+dan memiliki ruang jawaban.
 
-LATIHAN & DISTRIBUSI ${questionCount} SOAL
-Bentuk Soal Latihan: ${exercises}
-Susun tepat ${questionCount} butir soal bernomor urut (Soal 1 s.d. Soal ${questionCount}) yang bervariasi, menguji pemahaman konsep hingga penalaran HOTS sesuai jenjang, lengkap dengan ruang jawaban siswa serta lampiran Kunci Jawaban Singkat untuk Guru di bagian akhir.
+LATIHAN (Opsional)
+Buat soal tambahan (${questionCount} soal${exercises ? ` — ${exercises}` : ''}) yang:
+relevan dengan materi,
+bervariasi,
+tidak terlalu sulit,
+dan tetap berbasis ilustrasi atau aktivitas.
+Boleh berupa:
+pilihan ganda,
+isian,
+menjodohkan,
+atau uraian singkat.
 
-REFLEKSI SISWA (Pada Halaman Terakhir / Halaman ${pageCount})
-Buat 2–3 pertanyaan refleksi sederhana beserta pilihan ekspresi perasaan belajar siswa.
+REFLEKSI SISWA
+Buat 2–3 pertanyaan refleksi sederhana seperti:
+Apa hal baru yang kamu pelajari hari ini?
+Bagian mana yang paling kamu sukai?
+Apa yang masih ingin kamu pelajari?
 
-KETENTUAN GAYA SENI ILUSTRASI
-Gunakan gaya seni ilustrasi: ${styleArt},
-warna cerah dan selaras dengan tema pelajaran,
-tidak terlalu ramai, mendukung pemahaman materi, dan diletakkan dekat soal atau aktivitas terkait.
-${extraNote}
+KETENTUAN ILUSTRASI
+Gunakan ilustrasi:
+${styleArt.toLowerCase()},
+warna cerah dan menarik,
+tidak terlalu ramai,
+mendukung pemahaman materi,
+dan diletakkan dekat soal atau aktivitas terkait.
+
 OUTPUT
-Hasil akhir harus berupa LKPD lengkap ${pageCount} halaman A4 dengan ${questionCount} butir soal siap cetak, full color, rapi, profesional, memiliki perpaduan teks dan ilustrasi "${styleArt}" yang seimbang, serta siap digunakan di kelas maupun tugas mandiri.`;
+Hasil akhir harus:
+berupa LKPD lengkap siap cetak,
+full color,
+rapi dan profesional,
+menggunakan heading yang jelas,
+memiliki perpaduan teks dan ilustrasi yang seimbang,
+dan cocok digunakan dalam pembelajaran di kelas maupun tugas rumah.${extraNote}`;
     }
 
     case 'infografis': {

@@ -37,6 +37,7 @@ interface LkpdWorkbookViewProps {
   subject: string;
   educationLevel: EducationLevel;
   gradeClass: string;
+  learningObjectives?: string;
   lkpdType?: string;
   lkpdPageCount?: number;
   lkpdQuestionCount?: number;
@@ -158,6 +159,7 @@ export const LkpdWorkbookView: React.FC<LkpdWorkbookViewProps> = ({
   subject,
   educationLevel,
   gradeClass,
+  learningObjectives,
   lkpdType = 'LKPD Eksperimen',
   lkpdPageCount = 2,
   lkpdQuestionCount = 10,
@@ -297,6 +299,11 @@ Jenjang & Kelas : ${gradeClass} (${educationLevel})
 Mata Pelajaran : ${subject}
 Materi Pokok : ${topic}
 Jenis LKPD : ${activeType}
+Tujuan Pembelajaran : ${
+      learningObjectives && learningObjectives.trim()
+        ? learningObjectives.trim()
+        : `Peserta didik mampu memahami materi "${topic}" secara jelas, sederhana, dan kontekstual.`
+    }
 Aktivitas Bergambar : ${pictureActivities.join(', ')}
 Bentuk Latihan : ${includeExercises.join(', ')}
 
@@ -342,7 +349,11 @@ REFLEKSI SISWA (Halaman ${activePageCount})
 ---
 
 ### 🎯 1. Capaian & Tujuan Pembelajaran
-- Peserta didik mampu menelaah dan memahami konsep esensial materi **${topic}** melalui kegiatan penyelidikan aktif dan eksplorasi visual kontekstual.
+- ${
+        learningObjectives && learningObjectives.trim()
+          ? learningObjectives.trim()
+          : `Peserta didik mampu menelaah dan memahami konsep esensial materi **${topic}** melalui kegiatan penyelidikan aktif dan eksplorasi visual kontekstual.`
+      }
 - **Profil Pelajar Pancasila**: Bernalar Kritis, Kreatif, dan Bergotong Royong.
 
 ### 🔍 2. Stimulus Kasus & Ilustrasi Kontekstual (Gaya ${activeStyle})
@@ -868,13 +879,19 @@ ${questionsMarkdown}
                           </div>
                           <div>
                             <h3 className="text-xs font-black text-emerald-950">
-                              Tujuan Pembelajaran &amp; Karakter Pelajar Pancasila
+                              Tujuan Pembelajaran
                             </h3>
-                            <p className="text-xs text-slate-700 mt-0.5 leading-relaxed">
-                              Peserta didik mampu menelaah materi <strong>{topic}</strong> secara
-                              aktif, berpikir kritis melalui eksplorasi visual bergaya{' '}
-                              <em>{activeStyle}</em>, dan menyelesaikan {activeQuestionCount} butir
-                              tantangan dengan tepat.
+                            <p className="text-xs text-slate-700 mt-0.5 leading-relaxed whitespace-pre-line">
+                              {learningObjectives && learningObjectives.trim() ? (
+                                learningObjectives.trim()
+                              ) : (
+                                <>
+                                  Peserta didik mampu memahami materi <strong>{topic}</strong>{' '}
+                                  secara aktif, berpikir kritis melalui eksplorasi visual bergaya{' '}
+                                  <em>{activeStyle}</em>, dan menyelesaikan {activeQuestionCount}{' '}
+                                  butir tantangan dengan tepat.
+                                </>
+                              )}
                             </p>
                           </div>
                         </div>

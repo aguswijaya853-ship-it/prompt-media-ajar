@@ -1036,3 +1036,94 @@ export const LKPD_TYPES_LIST: LkpdTypeOption[] = [
     color: 'rose',
   },
 ];
+
+export interface AutoObjectivePreset {
+  id: string;
+  label: string;
+  text: string;
+}
+
+export function buildAutoLearningObjectives(
+  educationLevel: EducationLevel,
+  gradeClass: string,
+  subject: string,
+  topic: string,
+  activityName: string = 'aktivitas pembelajaran'
+): AutoObjectivePreset[] {
+  const cleanTopic = (topic || 'materi pembelajaran').trim();
+  const cleanClass = (gradeClass || 'peserta didik').trim();
+  const cleanActivity = (activityName || 'aktivitas bergambar').trim();
+
+  let verbUnderstand = 'memahami dan menjelaskan';
+  let verbActivity = 'mengamati ilustrasi serta menyelesaikan langkah kegiatan';
+  let verbApply = 'menghubungkan konsep dengan contoh nyata sehari-hari';
+
+  switch (educationLevel) {
+    case 'PAUD':
+      verbUnderstand = 'mengenal dan menyebutkan secara sederhana';
+      verbActivity = 'mengamati gambar warna-warni sambil bermain aktif';
+      verbApply = 'menunjukkan kebiasaan baik dalam kegiatan sehari-hari';
+      break;
+    case 'SD_FASE_A':
+      verbUnderstand = 'mengenal, menyebutkan, dan mencocokkan';
+      verbActivity = 'mengamati gambar serta memberi tanda jawaban sederhana';
+      verbApply = 'menceritakan kembali contoh sederhananya di rumah dan sekolah';
+      break;
+    case 'SD_FASE_B':
+      verbUnderstand = 'memahami dan menjelaskan kembali';
+      verbActivity = 'mengamati ilustrasi kontekstual serta mengisi lembar aktivitas';
+      verbApply = 'memberikan contoh penerapannya dalam kehidupan sehari-hari';
+      break;
+    case 'SD_FASE_C':
+      verbUnderstand = 'mengidentifikasi dan menguraikan hubungan konsep';
+      verbActivity = 'menelaah gambar/skema serta berdiskusi menyelesaikan tugas';
+      verbApply = 'menyimpulkan manfaat dan penerapannya di lingkungan sekitar';
+      break;
+    case 'SMP_FASE_D':
+      verbUnderstand = 'menganalisis konsep dan keterkaitan informasi';
+      verbActivity = 'mengamati stimulus visual serta mengolah data aktivitas';
+      verbApply = 'memecahkan permasalahan kontekstual secara logis dan komunikatif';
+      break;
+    case 'SMA_FASE_E':
+    case 'SMA_FASE_F':
+      verbUnderstand = 'menganalisis secara kritis dan mengevaluasi konsep';
+      verbActivity = 'menelaah representasi visual, data, serta studi kasus';
+      verbApply = 'merumuskan simpulan dan solusi ilmiah secara sistematis';
+      break;
+    case 'SMK':
+      verbUnderstand = 'memahami prinsip kerja dan menganalisis prosedur';
+      verbActivity = 'mengamati skema visual serta mengerjakan langkah kerja terstruktur';
+      verbApply = 'menerapkan konsep sesuai standar praktik kejuruan secara tepat';
+      break;
+    default:
+      break;
+  }
+
+  return [
+    {
+      id: 'simple',
+      label: 'Sederhana & Jelas (Rekomendasi)',
+      text: `Melalui kegiatan pada ${cleanActivity}, peserta didik ${cleanClass} mampu ${verbUnderstand} materi "${cleanTopic}" dengan jelas, tepat, dan mudah dipahami.`,
+    },
+    {
+      id: 'visual',
+      label: 'Berbasis Aktivitas Bergambar',
+      text: `Melalui aktivitas ${verbActivity}, peserta didik mampu mengenali bagian penting dan menyelesaikan latihan tentang "${cleanTopic}" (${subject}) secara aktif dan mandiri.`,
+    },
+    {
+      id: 'contextual',
+      label: 'Kontekstual & Penalaran',
+      text: `Peserta didik ${cleanClass} mampu ${verbUnderstand} "${cleanTopic}" serta ${verbApply} dengan bahasa yang runtut dan percaya diri.`,
+    },
+    {
+      id: 'three_points',
+      label: 'Paket Lengkap 3 Poin TP',
+      text: [
+        `1. Peserta didik mampu ${verbUnderstand} konsep inti pada materi "${cleanTopic}" dengan benar.`,
+        `2. Peserta didik mampu ${verbActivity} pada ${cleanActivity} secara teliti dan runtut.`,
+        `3. Peserta didik mampu ${verbApply} sesuai materi "${cleanTopic}".`,
+      ].join('\n'),
+    },
+  ];
+}
+
