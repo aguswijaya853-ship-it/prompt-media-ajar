@@ -1,0 +1,8 @@
+{
+  "name": "Media Ajar & Game Edukasi Interaktif - Prompt Generator",
+  "description": "Generator prompt profesional Kurikulum Merdeka untuk ChatGPT, Gemini, Claude, dan Canva Code dalam menyusun media ajar, kuis HOTS, LKPD, game edukasi, dan modul ajar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
