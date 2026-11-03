@@ -26,6 +26,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   favoritesCount,
 }) => {
   const [savedNotice, setSavedNotice] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const activeThemeConfig = APP_THEMES[currentTheme] || APP_THEMES['forest-green'];
 
@@ -142,6 +143,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <option value="perplexity">Perplexity AI</option>
             <option value="quizizz">Quizizz AI</option>
             <option value="gamma">Gamma App AI</option>
+            <option value="suno">Suno AI Music (Generator Lagu &amp; Audio Siap Putar)</option>
+            <option value="invideo">InVideo / Video AI (Generator Video 1–3 Menit)</option>
             <option value="poe">Poe AI</option>
           </select>
           <p className="text-[11px] text-slate-500 mt-1">
@@ -205,19 +208,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <strong>{favoritesCount}</strong> prompt di memori perangkat.
         </p>
 
-        <div>
-          <button
-            onClick={() => {
-              if (window.confirm('Apakah Anda yakin ingin menghapus semua prompt favorit yang tersimpan?')) {
-                onClearFavorites();
-              }
-            }}
-            disabled={favoritesCount === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-40 text-xs font-bold transition"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Hapus Semua Favorit ({favoritesCount})</span>
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {!confirmClear ? (
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              disabled={favoritesCount === 0}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-40 text-xs font-bold transition whitespace-nowrap"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Hapus Semua Favorit ({favoritesCount})</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              <span className="text-xs font-bold text-rose-800">
+                Yakin hapus {favoritesCount} favorit?
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  onClearFavorites();
+                  setConfirmClear(false);
+                }}
+                className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition whitespace-nowrap"
+              >
+                Ya, Hapus
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmClear(false)}
+                className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold transition whitespace-nowrap"
+              >
+                Batal
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -7,7 +7,10 @@ import {
   SavedPrompt,
   AppTheme,
 } from '../types';
-import { generateEducationalPrompt } from '../utils/promptGenerator';
+import {
+  generateEducationalPrompt,
+  PromptOutputVariant,
+} from '../utils/promptGenerator';
 import {
   EDUCATION_LEVELS,
   COMMON_SUBJECTS,
@@ -27,6 +30,8 @@ import {
   MODUL_DETAILED_COMPONENTS,
   MODUL_TIME_ALLOCATIONS_BY_LEVEL,
   buildAutoLearningObjectives,
+  GENERAL_POSTER_CATEGORIES,
+  GENERAL_POSTER_AUDIENCES,
 } from '../data/curriculumData';
 import { APP_THEMES } from '../data/themes';
 import { LkpdWorkbookView } from './LkpdWorkbookView';
@@ -60,6 +65,10 @@ import {
   Minus,
   Plus,
   Search,
+  Music,
+  Video,
+  Printer,
+  Globe,
 } from 'lucide-react';
 
 interface PromptModalProps {
@@ -85,6 +94,12 @@ export const PromptModal: React.FC<PromptModalProps> = ({
   const isPresentasi = category.id === 'presentasi';
   const isModul = category.id === 'modul';
   const isLkpd = category.id === 'lkpd';
+  const isInfografis = category.id === 'infografis';
+  const isAudio = category.id === 'audio';
+  const isVideo = category.id === 'video';
+  const isCetak = category.id === 'cetak';
+  const hasDirectOutputPrompt =
+    isLkpd || isInfografis || isAudio || isVideo || isCetak;
 
   const [educationLevel, setEducationLevel] = useState<EducationLevel>(defaultLevel);
   const [gradeClass, setGradeClass] = useState<string>(
@@ -99,9 +114,24 @@ export const PromptModal: React.FC<PromptModalProps> = ({
   // Requirement 3: In PPT/Canva menu, AI Sasaran starts locked/defaulted to 'canva',
   // while still allowing the user to unlock or directly choose any other AI.
   const [targetAI, setTargetAI] = useState<TargetAI>(
-    isPresentasi ? 'canva' : defaultAI
+    isPresentasi ? 'canva' : isAudio ? 'suno' : isVideo ? 'invideo' : defaultAI
   );
   const [isCanvaLocked, setIsCanvaLocked] = useState<boolean>(isPresentasi);
+
+  // Media Visual & Poster Umum vs Pembelajaran state
+  const [visualScope, setVisualScope] = useState<'pembelajaran' | 'umum'>('pembelajaran');
+  const [customVisualTypeName, setCustomVisualTypeName] = useState<string>('');
+  const [generalPosterCategoryId, setGeneralPosterCategoryId] = useState<string>('kampanye');
+  const [generalPosterTitle, setGeneralPosterTitle] = useState<string>(
+    GENERAL_POSTER_CATEGORIES[0].defaultTitle
+  );
+  const [generalPosterPoints, setGeneralPosterPoints] = useState<string>('');
+  const [generalPosterAudience, setGeneralPosterAudience] = useState<string>(
+    GENERAL_POSTER_AUDIENCES[0]
+  );
+  const [generalPosterCta, setGeneralPosterCta] = useState<string>('');
+  const [aiGeneralPosterIdeas, setAiGeneralPosterIdeas] = useState<string[]>([]);
+  const [isGeneratingPosterIdeas, setIsGeneratingPosterIdeas] = useState<boolean>(false);
 
   const [learningObjectives, setLearningObjectives] = useState<string>('');
   const [learningObjMode, setLearningObjMode] = useState<'auto' | 'manual'>('auto');
@@ -137,7 +167,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
   ]);
   const [illustrationStyle, setIllustrationStyle] = useState<string>('Kartun Edukatif');
   const [styleSearchQuery, setStyleSearchQuery] = useState<string>('');
-  const [lkpdPromptMode, setLkpdPromptMode] = useState<'filled' | 'raw'>('filled');
+  const [promptVariantMode, setPromptVariantMode] = useState<PromptOutputVariant>('filled');
 
   // Modul Ajar specific configurations (Detailed Components Checklist & Custom Time Allocation)
   const [selectedModulComponents, setSelectedModulComponents] = useState<string[]>(
@@ -173,7 +203,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
 
   // Gemini Live Testing state & AI model selection in Test Tab
   const [selectedTestAI, setSelectedTestAI] = useState<TargetAI>(
-    isPresentasi ? 'canva' : 'gemini'
+    isPresentasi ? 'canva' : isAudio ? 'suno' : isVideo ? 'invideo' : 'gemini'
   );
   const [testResult, setTestResult] = useState<string>('');
   const [isTesting, setIsTesting] = useState<boolean>(false);
@@ -464,6 +494,57 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
     });
   };
 
+  const activeGeneralPosterCategory = useMemo(() => {
+    return (
+      GENERAL_POSTER_CATEGORIES.find((c) => c.id === generalPosterCategoryId) ||
+      GENERAL_POSTER_CATEGORIES[0]
+    );
+  }, [generalPosterCategoryId]);
+
+  const handleGenerateGeneralPosterIdeasWithAI = async () => {
+    setIsGeneratingPosterIdeas(true);
+    try {
+      const prompt = `Berikan 6 ide judul poster infografis menarik, komunikatif, dan siap pakai untuk kategori "${activeGeneralPosterCategory.label}" dengan sasaran audiens "${generalPosterAudience}".
+Format jawaban WAJIB HANYA berupa JSON string array tanpa markdown, contoh persis:
+["Judul Poster 1", "Judul Poster 2", "Judul Poster 3", "Judul Poster 4", "Judul Poster 5", "Judul Poster 6"]`;
+      const response = await fetch('/api/gemini/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      const data = await response.json();
+      let text = (data.text || '').trim();
+      text = text.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAiGeneralPosterIdeas(parsed.map((p) => String(p).trim()).filter(Boolean).slice(0, 6));
+          return;
+        }
+      } catch {}
+      setAiGeneralPosterIdeas(activeGeneralPosterCategory.sampleTopics);
+    } catch {
+      setAiGeneralPosterIdeas(activeGeneralPosterCategory.sampleTopics);
+    } finally {
+      setIsGeneratingPosterIdeas(false);
+    }
+  };
+
+  const effectiveDisplayTopic = useMemo(() => {
+    if (isInfografis && visualScope === 'umum') {
+      return generalPosterTitle.trim() || activeGeneralPosterCategory.defaultTitle;
+    }
+    return topic.trim() || category.defaultTopic;
+  }, [
+    isInfografis,
+    visualScope,
+    generalPosterTitle,
+    activeGeneralPosterCategory,
+    topic,
+    category.defaultTopic,
+  ]);
+
   // Build the live prompt
   const generatedPrompt = useMemo(() => {
     const effectiveAnswers = { ...customAnswers };
@@ -476,7 +557,7 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
       educationLevel,
       gradeLevel: gradeClass,
       subject,
-      topic: topic.trim() || category.defaultTopic,
+      topic: effectiveDisplayTopic,
       targetAI,
       learningObjectives,
       pancasilaDimensions,
@@ -489,19 +570,25 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
       includeExercises: selectedExercises,
       illustrationStyle,
       modulComponentsList: isModul ? selectedModulComponents : undefined,
+      visualScope: isInfografis ? visualScope : undefined,
+      customVisualTypeName: isInfografis ? customVisualTypeName : undefined,
+      generalPosterCategory: isInfografis ? activeGeneralPosterCategory.label : undefined,
+      generalPosterAudience: isInfografis ? generalPosterAudience : undefined,
+      generalPosterPoints: isInfografis ? generalPosterPoints : undefined,
+      generalPosterCta: isInfografis ? generalPosterCta : undefined,
     };
     return generateEducationalPrompt(
       category,
       formData,
       effectiveAnswers,
-      isLkpd && lkpdPromptMode === 'raw'
+      hasDirectOutputPrompt ? promptVariantMode : 'filled'
     );
   }, [
     category,
     educationLevel,
     gradeClass,
     subject,
-    topic,
+    effectiveDisplayTopic,
     targetAI,
     learningObjectives,
     pancasilaDimensions,
@@ -516,9 +603,16 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
     selectedExercises,
     illustrationStyle,
     selectedModulComponents,
-    lkpdPromptMode,
+    promptVariantMode,
     isModul,
-    isLkpd,
+    isInfografis,
+    hasDirectOutputPrompt,
+    visualScope,
+    customVisualTypeName,
+    activeGeneralPosterCategory,
+    generalPosterAudience,
+    generalPosterPoints,
+    generalPosterCta,
   ]);
 
   const handleCopy = () => {
@@ -528,13 +622,16 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
   };
 
   const handleSave = () => {
+    const isGeneralPoster = isInfografis && visualScope === 'umum';
     const item: SavedPrompt = {
       id: 'saved-' + Date.now(),
       categoryId: category.id,
       categoryTitle: category.title,
-      topic: topic || category.defaultTopic,
-      subject,
-      educationLevel: `${gradeClass} (${educationLevel})`,
+      topic: effectiveDisplayTopic,
+      subject: isGeneralPoster ? activeGeneralPosterCategory.label : subject,
+      educationLevel: isGeneralPoster
+        ? generalPosterAudience
+        : `${gradeClass} (${educationLevel})`,
       targetAI,
       promptText: generatedPrompt,
       createdAt: Date.now(),
@@ -653,6 +750,10 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
         return `https://quizizz.com/`;
       case 'gamma':
         return `https://gamma.app/`;
+      case 'suno':
+        return `https://suno.com/`;
+      case 'invideo':
+        return `https://ai.invideo.io/`;
       case 'poe':
         return `https://poe.com/`;
       default:
@@ -706,6 +807,12 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
     } else if (modelTarget === 'quizizz') {
       specificInstruction =
         'Kamu adalah Quizizz AI, rancang paket soal kuis interaktif gamifikasi lengkap dengan alokasi waktu detik, poin skor, opsi pilihan jawaban, dan kunci penjelasan.';
+    } else if (modelTarget === 'suno') {
+      specificInstruction =
+        'Kamu adalah Suno AI Music Studio, susunkan paket produksi lagu pembelajaran siap putar lengkap dengan Style of Music Tags, tempo BPM, kunci nada, struktur lagu [Intro], [Verse], [Chorus], [Bridge], [Outro] berima kuat, serta panduan ekspresi vokal dan gerakan siswa.';
+    } else if (modelTarget === 'invideo') {
+      specificInstruction =
+        'Kamu adalah InVideo / Video AI Producer, rancang produksi video pembelajaran siap putar berdurasi 1-3 menit lengkap dengan timeline detik demi detik (00:00-03:00), visual motion prompt per adegan, naskah voiceover Bahasa Indonesia, subtitle teks layar, dan kuis penutup.';
     }
 
     try {
@@ -994,13 +1101,261 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
           {/* TAB 1: FORM CUSTOMIZATION */}
           {activeTab === 'form' && (
             <div className="space-y-5">
-              {/* Card 1: Profil Jenjang & Pemilihan Kelas Otomatis */}
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
-                    <BookOpen className="w-4 h-4" style={{ color: theme.primaryHex }} />
-                    <span>1. Jenjang Pendidikan &amp; Fase Belajar</span>
+              {/* Mode Switcher khusus Media Visual & Infografis: Pembelajaran Sekolah vs Media Visual & Poster Umum */}
+              {isInfografis && (
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-cyan-600" />
+                        <span>Pilih Mode Pembuatan Media Visual &amp; Poster Jadi</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Buat poster pelajaran kelas atau buat poster umum sesuai keinginan tanpa kehilangan struktur infografisnya.
+                      </p>
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setVisualScope('pembelajaran')}
+                      className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between gap-1 ${
+                        visualScope === 'pembelajaran'
+                          ? 'bg-cyan-50/90 border-cyan-600 text-cyan-950 ring-2 ring-cyan-500/20 shadow-xs'
+                          : 'bg-slate-50/70 hover:bg-slate-100 border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-extrabold flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5 text-cyan-700 shrink-0" />
+                          <span>Media Visual Pembelajaran (Materi Kelas)</span>
+                        </span>
+                        {visualScope === 'pembelajaran' && (
+                          <Check className="w-4 h-4 text-cyan-700 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-snug">
+                        Poster &amp; infografis mata pelajaran sesuai Jenjang, Fase, Kelas, dan Kurikulum Merdeka.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setVisualScope('umum')}
+                      className={`p-3.5 rounded-2xl border text-left transition flex flex-col justify-between gap-1 ${
+                        visualScope === 'umum'
+                          ? 'bg-emerald-50/90 border-emerald-600 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs'
+                          : 'bg-slate-50/70 hover:bg-slate-100 border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-extrabold flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                          <span>Media Visual &amp; Poster Umum (Bebas Sesuai Keinginan)</span>
+                        </span>
+                        {visualScope === 'umum' && (
+                          <Check className="w-4 h-4 text-emerald-700 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-snug">
+                        Buat poster kampanye, acara/lomba, pengumuman/PPDB, SOP, motivasi, promosi karya, atau tema bebas apa pun.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Card 1 Umum: Pengaturan Poster & Media Visual Umum (ketika mode umum dipilih) */}
+              {isInfografis && visualScope === 'umum' ? (
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                      <Palette className="w-4 h-4" style={{ color: theme.primaryHex }} />
+                      <span>1. Detail Poster &amp; Media Visual Umum yang Diinginkan</span>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700">
+                      {activeGeneralPosterCategory.label}
+                    </span>
+                  </div>
+
+                  {/* Pilihan Kategori Poster Umum */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Kategori Kebutuhan Poster Umum:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {GENERAL_POSTER_CATEGORIES.map((cat) => {
+                        const isPicked = generalPosterCategoryId === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setGeneralPosterCategoryId(cat.id);
+                              setGeneralPosterTitle(cat.defaultTitle);
+                              setAiGeneralPosterIdeas([]);
+                              setCustomAnswers((prev) => ({
+                                ...prev,
+                                visualType: cat.suggestedVisualType,
+                              }));
+                            }}
+                            className={`text-xs px-3 py-1.5 rounded-xl border font-bold transition whitespace-nowrap ${
+                              isPicked
+                                ? 'text-white shadow-xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                            style={
+                              isPicked
+                                ? {
+                                    backgroundColor: theme.primaryHex,
+                                    borderColor: theme.primaryHex,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {isPicked ? '✓ ' : ''}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Judul / Tema Poster yang Diinginkan */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <label className="text-xs font-bold text-slate-700">
+                        Judul / Tema Poster yang Ingin Dibuat:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleGenerateGeneralPosterIdeasWithAI}
+                        disabled={isGeneratingPosterIdeas}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white text-xs font-bold shadow-xs transition active:scale-95 disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {isGeneratingPosterIdeas ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Wand2 className="w-3.5 h-3.5 text-amber-200" />
+                        )}
+                        <span>
+                          {isGeneratingPosterIdeas
+                            ? 'Menyusun Ide...'
+                            : 'Munculkan Ide Poster dengan AI'}
+                        </span>
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={generalPosterTitle}
+                      onChange={(e) => setGeneralPosterTitle(e.target.value)}
+                      placeholder="Ketik bebas judul atau tema poster yang Anda inginkan..."
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm font-medium focus:outline-hidden"
+                    />
+
+                    {/* Contoh Ide Cepat sesuai Kategori */}
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-bold text-slate-600 block">
+                        Contoh Tema Cepat ({activeGeneralPosterCategory.label}):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(aiGeneralPosterIdeas.length > 0
+                          ? aiGeneralPosterIdeas
+                          : activeGeneralPosterCategory.sampleTopics
+                        ).map((idea) => {
+                          const active = generalPosterTitle === idea;
+                          return (
+                            <button
+                              key={idea}
+                              type="button"
+                              onClick={() => setGeneralPosterTitle(idea)}
+                              className={`text-xs px-2.5 py-1 rounded-lg border text-left transition ${
+                                active
+                                  ? 'bg-cyan-600 text-white font-bold border-cyan-600 shadow-2xs'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              {active ? '✓ ' : '+ '}
+                              {idea}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sasaran Pembaca / Audiens Poster */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Sasaran Pembaca / Audiens Poster:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {GENERAL_POSTER_AUDIENCES.map((aud) => {
+                        const active = generalPosterAudience === aud;
+                        return (
+                          <button
+                            key={aud}
+                            type="button"
+                            onClick={() => setGeneralPosterAudience(aud)}
+                            className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition ${
+                              active
+                                ? 'bg-slate-800 text-white border-slate-800'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {active ? '✓ ' : ''}
+                            {aud}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <input
+                      type="text"
+                      value={generalPosterAudience}
+                      onChange={(e) => setGeneralPosterAudience(e.target.value)}
+                      placeholder="Atau ketik sasaran audiens khusus (misal: Peserta Lomba, Wali Murid, Pengunjung Klinik)..."
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium focus:outline-hidden"
+                    />
+                  </div>
+
+                  {/* Isi Poin Infografis & Kalimat Ajakan */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Poin Penting / Isi Infografis di Poster (Opsional):
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={generalPosterPoints}
+                        onChange={(e) => setGeneralPosterPoints(e.target.value)}
+                        placeholder="Kosongkan agar AI menyusun poin infografis otomatis, atau tulis poin penting Anda (misal: waktu & tempat, langkah-langkah, syarat, data kunci)..."
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-hidden"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Kalimat Ajakan / Slogan / Info Penyelenggara (Opsional):
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={generalPosterCta}
+                        onChange={(e) => setGeneralPosterCta(e.target.value)}
+                        placeholder="Contoh: Ayo Daftar Sekarang! · Scan QR untuk Info Lengkap · Panitia Kegiatan Sekolah..."
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Card 1: Profil Jenjang & Pemilihan Kelas Otomatis */
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                      <BookOpen className="w-4 h-4" style={{ color: theme.primaryHex }} />
+                      <span>1. Jenjang Pendidikan &amp; Fase Belajar</span>
+                    </div>
                   <span className="text-xs font-bold text-slate-600">
                     {PHASE_CLASS_MAPPINGS[educationLevel]?.phaseName}
                   </span>
@@ -1462,6 +1817,7 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Card 2A: Pengaturan LKPD Lengkap (Jumlah Halaman, Jumlah Soal, Bentuk, Aktivitas & 28 Gaya Seni Ilustrasi) */}
               {isLkpd && (
@@ -1779,7 +2135,7 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                 </div>
               )}
 
-              {/* Card 2B: Spesifikasi Kategori Lainnya (Presentasi, Modul Ajar, Infografis, Cetak, Literasi, dll.) */}
+              {/* Card 2B: Spesifikasi Kategori Lainnya (Presentasi, Modul Ajar, Infografis, Audio, Video, Cetak, Literasi, dll.) */}
               {!isLkpd && (
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1788,6 +2144,183 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                       <span>2. Spesifikasi Khusus {category.categoryName}</span>
                     </div>
                   </div>
+
+                  {/* Banner & Quick AI Selector untuk Media Visual & Poster Jadi + Infografis Utuh */}
+                  {isInfografis && (
+                    <div className="bg-cyan-50/80 border border-cyan-200 rounded-2xl p-3.5 space-y-2">
+                      <div className="text-xs font-extrabold text-cyan-950 flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4 text-cyan-700 shrink-0" />
+                        <span>
+                          Prompt Buat Poster Jadi Sesuai Nama Media Visual + Infografis Tetap Utuh
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Prompt dirancang khusus agar AI langsung menghasilkan{' '}
+                        <strong>poster jadi siap cetak/pakai</strong> mengikuti bentuk{' '}
+                        <strong>Nama / Jenis Media Visual</strong> yang Anda pilih, tanpa
+                        menghilangkan zona diagram, ikon, maupun alur infografis di dalam posternya.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[11px] font-bold text-cyan-900 mr-1">
+                          Pilih Cepat AI Pembuat Poster:
+                        </span>
+                        {(['canva', 'gemini', 'chatgpt', 'claude', 'dola'] as TargetAI[]).map(
+                          (aiId) => {
+                            const model = AI_MODELS_LIST.find((m) => m.id === aiId);
+                            if (!model) return null;
+                            const active = targetAI === aiId;
+                            return (
+                              <button
+                                key={aiId}
+                                type="button"
+                                onClick={() => handleSelectTargetAI(aiId)}
+                                className={`text-xs px-2.5 py-1 rounded-xl border font-bold transition whitespace-nowrap ${
+                                  active
+                                    ? 'bg-cyan-700 text-white border-cyan-700 shadow-2xs'
+                                    : 'bg-white hover:bg-cyan-100 text-slate-700 border-cyan-200'
+                                }`}
+                              >
+                                {active ? '✓ ' : ''}
+                                {model.name}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Banner & Quick AI Selector untuk Audio & Lagu Pembelajaran Siap Putar */}
+                  {isAudio && (
+                    <div className="bg-orange-50/80 border border-orange-200 rounded-2xl p-3.5 space-y-2">
+                      <div className="text-xs font-extrabold text-orange-950 flex items-center gap-1.5">
+                        <Music className="w-4 h-4 text-orange-600 shrink-0" />
+                        <span>
+                          Prompt Lagu Pembelajaran dalam Bentuk Audio yang Bisa Diputar &amp; Didengar
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Menghasilkan instruksi render <strong>audio lagu utuh siap putar</strong>{' '}
+                        (vokal Bahasa Indonesia jernih + aransemen musik pengiring) lengkap dengan{' '}
+                        <strong>Style of Music Tags</strong> untuk Suno AI / Udio / Gemini Audio.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[11px] font-bold text-orange-900 mr-1">
+                          AI Audio Sasaran:
+                        </span>
+                        {(['suno', 'gemini', 'chatgpt', 'canva', 'dola'] as TargetAI[]).map(
+                          (aiId) => {
+                            const model = AI_MODELS_LIST.find((m) => m.id === aiId);
+                            if (!model) return null;
+                            const active = targetAI === aiId;
+                            return (
+                              <button
+                                key={aiId}
+                                type="button"
+                                onClick={() => handleSelectTargetAI(aiId)}
+                                className={`text-xs px-2.5 py-1 rounded-xl border font-bold transition whitespace-nowrap ${
+                                  active
+                                    ? 'bg-orange-600 text-white border-orange-600 shadow-2xs'
+                                    : 'bg-white hover:bg-orange-100 text-slate-700 border-orange-200'
+                                }`}
+                              >
+                                {active ? '✓ ' : ''}
+                                {model.name}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Banner & Quick AI Selector untuk Video Pembelajaran Siap Putar 1–3 Menit */}
+                  {isVideo && (
+                    <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-3.5 space-y-2">
+                      <div className="text-xs font-extrabold text-teal-950 flex items-center gap-1.5">
+                        <Video className="w-4 h-4 text-teal-700 shrink-0" />
+                        <span>
+                          Prompt Video Pembelajaran Siap Putar &amp; Dilihat (Durasi 1–3 Menit)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Menghasilkan instruksi pembuatan <strong>video utuh berdurasi 1–3 menit</strong>{' '}
+                        yang dapat langsung diputar &amp; ditonton siswa lengkap dengan animasi visual
+                        bergerak, narasi suara (voiceover), subtitle teks layar, dan kuis penutup.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[11px] font-bold text-teal-900 mr-1">
+                          AI Video Sasaran:
+                        </span>
+                        {(['invideo', 'canva', 'gemini', 'chatgpt', 'dola'] as TargetAI[]).map(
+                          (aiId) => {
+                            const model = AI_MODELS_LIST.find((m) => m.id === aiId);
+                            if (!model) return null;
+                            const active = targetAI === aiId;
+                            return (
+                              <button
+                                key={aiId}
+                                type="button"
+                                onClick={() => handleSelectTargetAI(aiId)}
+                                className={`text-xs px-2.5 py-1 rounded-xl border font-bold transition whitespace-nowrap ${
+                                  active
+                                    ? 'bg-teal-700 text-white border-teal-700 shadow-2xs'
+                                    : 'bg-white hover:bg-teal-100 text-slate-700 border-teal-200'
+                                }`}
+                              >
+                                {active ? '✓ ' : ''}
+                                {model.name}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Banner & Quick AI Selector untuk Cetak & Alat Peraga Ukuran A4/A3 */}
+                  {isCetak && (
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
+                      <div className="text-xs font-extrabold text-emerald-950 flex items-center gap-1.5">
+                        <Printer className="w-4 h-4 text-emerald-700 shrink-0" />
+                        <span>
+                          Prompt Buat Langsung Desain Media Cetak &amp; Alat Peraga (Ukuran Kertas A4 / A3)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Menghasilkan desain lembar cetak visual siap print pada ukuran kertas{' '}
+                        <strong>A4 / A3 (300 DPI)</strong> lengkap dengan ilustrasi penuh warna,
+                        margin printer aman, serta garis potong (✂) &amp; lipat presisi.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[11px] font-bold text-emerald-900 mr-1">
+                          AI Desain Cetak:
+                        </span>
+                        {(['gemini', 'chatgpt', 'canva', 'claude', 'dola'] as TargetAI[]).map(
+                          (aiId) => {
+                            const model = AI_MODELS_LIST.find((m) => m.id === aiId);
+                            if (!model) return null;
+                            const active = targetAI === aiId;
+                            return (
+                              <button
+                                key={aiId}
+                                type="button"
+                                onClick={() => handleSelectTargetAI(aiId)}
+                                className={`text-xs px-2.5 py-1 rounded-xl border font-bold transition whitespace-nowrap ${
+                                  active
+                                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                                    : 'bg-white hover:bg-emerald-100 text-slate-700 border-emerald-200'
+                                }`}
+                              >
+                                {active ? '✓ ' : ''}
+                                {model.name}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* REQUIREMENT 3: Dedicated AI Sasaran Control inside PPT/Canva Menu */}
                   {isPresentasi && (
@@ -2040,6 +2573,33 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                                   )}
                                 </div>
                               )}
+
+                              {/* Input Kustom Nama / Jenis Media Visual & Poster agar bisa membuat poster spesifik sesuai keinginan */}
+                              {isInfografis && q.field === 'visualType' && (
+                                <div className="pt-1.5 space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-slate-600">
+                                      Atau ketik bebas Nama / Jenis Media Visual &amp; Poster yang Anda inginkan:
+                                    </span>
+                                    {customVisualTypeName.trim() && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setCustomVisualTypeName('')}
+                                        className="text-rose-600 font-bold hover:underline whitespace-nowrap"
+                                      >
+                                        Gunakan Pilihan Daftar
+                                      </button>
+                                    )}
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={customVisualTypeName}
+                                    onChange={(e) => setCustomVisualTypeName(e.target.value)}
+                                    placeholder="Contoh: Poster Infografis Menu Makanan Sehat / Poster Jadwal Piket & Kebersihan / Poster Lomba Sains..."
+                                    className="w-full bg-cyan-50/40 border border-cyan-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-hidden"
+                                  />
+                                </div>
+                              )}
                             </>
                           )}
 
@@ -2227,72 +2787,88 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                 </div>
               )}
 
-              {/* Card 3: Profil Pelajar Pancasila & Pembelajaran Berdiferensiasi */}
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
+              {/* Card 3: Profil Pelajar Pancasila & Pembelajaran Berdiferensiasi (atau Catatan Desain untuk Poster Umum) */}
+              {isInfografis && visualScope === 'umum' ? (
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3">
                   <div className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
-                    <span>3. Profil Pelajar Pancasila &amp; Pembelajaran Berdiferensiasi</span>
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>3. Catatan Tambahan Desain Poster (Opsional)</span>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
-                    Pilih Dimensi Profil Pelajar Pancasila:
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PANCASILA_DIMENSIONS.map((dim) => {
-                      const active = pancasilaDimensions.includes(dim);
-                      return (
-                        <button
-                          key={dim}
-                          type="button"
-                          onClick={() => togglePancasila(dim)}
-                          className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
-                            active
-                              ? 'bg-purple-100 text-purple-900 border-purple-300 font-bold'
-                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          {active ? '✓ ' : '+ '}
-                          {dim}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-bold text-slate-800">
-                      Aktifkan Pendekatan Pembelajaran Berdiferensiasi
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      Menyesuaikan materi untuk 3 kelompok kesiapan belajar (bimbingan, reguler,
-                      pengayaan).
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={differentiation}
-                    onChange={(e) => setDifferentiation(e.target.checked)}
-                    className="w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Catatan Tambahan Guru (Opsional):
-                  </label>
                   <textarea
                     rows={2}
                     value={additionalNotes}
                     onChange={(e) => setAdditionalNotes(e.target.value)}
-                    placeholder="Contoh: Gunakan contoh dari kehidupan sehari-hari siswa, tambahkan kunci jawaban..."
+                    placeholder="Contoh: Gunakan warna dominan biru-emas, sediakan ruang kosong di pojok kanan bawah untuk logo & QR Code..."
                     className="w-full bg-white border border-slate-300 rounded-xl p-3 text-xs focus:outline-hidden"
                   />
                 </div>
-              </div>
+              ) : (
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span>3. Profil Pelajar Pancasila &amp; Pembelajaran Berdiferensiasi</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                      Pilih Dimensi Profil Pelajar Pancasila:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PANCASILA_DIMENSIONS.map((dim) => {
+                        const active = pancasilaDimensions.includes(dim);
+                        return (
+                          <button
+                            key={dim}
+                            type="button"
+                            onClick={() => togglePancasila(dim)}
+                            className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
+                              active
+                                ? 'bg-purple-100 text-purple-900 border-purple-300 font-bold'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {active ? '✓ ' : '+ '}
+                            {dim}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">
+                        Aktifkan Pendekatan Pembelajaran Berdiferensiasi
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Menyesuaikan materi untuk 3 kelompok kesiapan belajar (bimbingan, reguler,
+                        pengayaan).
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={differentiation}
+                      onChange={(e) => setDifferentiation(e.target.checked)}
+                      className="w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Catatan Tambahan Guru (Opsional):
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={additionalNotes}
+                      onChange={(e) => setAdditionalNotes(e.target.value)}
+                      placeholder="Contoh: Gunakan contoh dari kehidupan sehari-hari siswa, tambahkan kunci jawaban..."
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-xs focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2307,46 +2883,93 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                   />
                   <span>
                     Prompt tersusun otomatis untuk model{' '}
-                    <strong>{targetAI.toUpperCase()}</strong> dengan spesifikasi{' '}
-                    <strong>{gradeClass}</strong>.
+                    <strong>{targetAI.toUpperCase()}</strong> dengan sasaran{' '}
+                    <strong>
+                      {isInfografis && visualScope === 'umum'
+                        ? generalPosterAudience
+                        : gradeClass}
+                    </strong>
+                    .
                   </span>
                 </div>
                 <button
                   onClick={() => setActiveTab('form')}
-                  className="shrink-0 hover:underline font-bold ml-2"
+                  className="shrink-0 hover:underline font-bold ml-2 whitespace-nowrap"
                   style={{ color: theme.primaryHex }}
                 >
                   Ubah Parameter &gt;
                 </button>
               </div>
 
-              {isLkpd && (
+              {hasDirectOutputPrompt && (
                 <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
                   <div className="flex items-center gap-2 text-xs font-bold text-emerald-950">
                     <span>
-                      Prompt Desainer LKPD A4 ({lkpdPageCount} Halaman · {lkpdQuestionCount} Soal ·{' '}
-                      {illustrationStyle})
+                      {isLkpd &&
+                        `Prompt Desainer LKPD A4 (${lkpdPageCount} Halaman · ${lkpdQuestionCount} Soal · ${illustrationStyle})`}
+                      {isInfografis &&
+                        `Prompt Buat Poster Jadi + Infografis Utuh (${
+                          visualScope === 'umum' ? 'Mode Poster Umum' : 'Mode Pembelajaran'
+                        })`}
+                      {isAudio &&
+                        `Prompt Lagu Pembelajaran Audio Siap Putar & Didengar (${
+                          customAnswers.audioDuration || '2–3 Menit'
+                        })`}
+                      {isVideo &&
+                        `Prompt Video Pembelajaran Siap Putar & Dilihat (${
+                          customAnswers.videoDuration || '1–3 Menit'
+                        })`}
+                      {isCetak &&
+                        `Prompt Buat Langsung Media Cetak & Alat Peraga (${
+                          customAnswers.paperSize || 'Ukuran Kertas A4 / A3'
+                        })`}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-emerald-200 text-xs font-bold self-start sm:self-auto shadow-2xs">
+                  <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-emerald-200 text-xs font-bold self-start sm:self-auto shadow-2xs flex-wrap">
                     <button
                       type="button"
-                      onClick={() => setLkpdPromptMode('filled')}
-                      className={`px-3 py-1 rounded-lg transition flex items-center gap-1.5 ${
-                        lkpdPromptMode === 'filled'
+                      onClick={() => setPromptVariantMode('filled')}
+                      className={`px-3 py-1 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+                        promptVariantMode === 'filled'
                           ? 'bg-emerald-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <Sparkles className="w-3 h-3 text-amber-300" />
-                      <span>Versi Terisi (Siap Pakai)</span>
+                      <span>
+                        {isInfografis
+                          ? 'Poster Jadi + Infografis'
+                          : isAudio
+                          ? 'Audio Lagu Siap Putar'
+                          : isVideo
+                          ? 'Video 1–3 Menit Siap Putar'
+                          : isCetak
+                          ? 'Desain Cetak A4/A3'
+                          : 'Versi Terisi (Siap Pakai)'}
+                      </span>
                     </button>
+
+                    {isInfografis && (
+                      <button
+                        type="button"
+                        onClick={() => setPromptVariantMode('blueprint')}
+                        className={`px-3 py-1 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+                          promptVariantMode === 'blueprint'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Layers className="w-3 h-3" />
+                        <span>Konsep Teks &amp; Canva</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => setLkpdPromptMode('raw')}
-                      className={`px-3 py-1 rounded-lg transition flex items-center gap-1.5 ${
-                        lkpdPromptMode === 'raw'
+                      onClick={() => setPromptVariantMode('raw')}
+                      className={`px-3 py-1 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+                        promptVariantMode === 'raw'
                           ? 'bg-emerald-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
@@ -2368,7 +2991,7 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
           {activeTab === 'workbook' && (
             <div className="space-y-4">
               <LkpdWorkbookView
-                topic={topic || category.defaultTopic}
+                topic={effectiveDisplayTopic}
                 subject={subject}
                 educationLevel={educationLevel}
                 gradeClass={gradeClass}
@@ -2418,6 +3041,8 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                       <option value="dola">Dola AI (dola.com)</option>
                       <option value="chatgpt">ChatGPT (GPT-4o)</option>
                       <option value="claude">Claude (Claude 3.7)</option>
+                      <option value="suno">Suno AI Music (Lagu Siap Putar)</option>
+                      <option value="invideo">InVideo / Video AI (Video 1–3 Menit)</option>
                       <option value="deepseek">DeepSeek AI</option>
                       <option value="quizizz">Quizizz AI</option>
                       <option value="copilot">Microsoft Copilot</option>
@@ -2447,6 +3072,16 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                       id: 'canva',
                       label: 'Canva Code',
                       color: 'bg-sky-50 text-sky-800 border-sky-200',
+                    },
+                    {
+                      id: 'suno',
+                      label: 'Suno AI Lagu',
+                      color: 'bg-orange-50 text-orange-800 border-orange-200',
+                    },
+                    {
+                      id: 'invideo',
+                      label: 'InVideo 1–3 Menit',
+                      color: 'bg-teal-50 text-teal-800 border-teal-200',
                     },
                     {
                       id: 'dola',
@@ -2595,14 +3230,29 @@ Format jawaban WAJIB HANYA berupa JSON string array berisi 4 kalimat Tujuan Pemb
                         <span>AI: {selectedTestAI.toUpperCase()}</span>
                       </div>
                       <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                        {topic || category.defaultTopic}
+                        {effectiveDisplayTopic}
                       </h2>
                       <p className="text-xs text-slate-600 mt-0.5 font-medium">
-                        Mata Pelajaran:{' '}
-                        <span className="font-bold text-emerald-700">{subject}</span> · Jenjang
-                        &amp; Kelas:{' '}
-                        <span className="font-bold text-slate-800">{gradeClass}</span> (
-                        {educationLevel})
+                        {isInfografis && visualScope === 'umum' ? (
+                          <>
+                            Kategori Poster:{' '}
+                            <span className="font-bold text-emerald-700">
+                              {activeGeneralPosterCategory.label}
+                            </span>{' '}
+                            · Sasaran Audiens:{' '}
+                            <span className="font-bold text-slate-800">
+                              {generalPosterAudience}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            Mata Pelajaran:{' '}
+                            <span className="font-bold text-emerald-700">{subject}</span> · Jenjang
+                            &amp; Kelas:{' '}
+                            <span className="font-bold text-slate-800">{gradeClass}</span> (
+                            {educationLevel})
+                          </>
+                        )}
                       </p>
                     </div>
 

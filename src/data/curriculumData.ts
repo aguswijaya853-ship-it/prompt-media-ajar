@@ -113,6 +113,26 @@ export const AI_MODELS_LIST: AIModelOption[] = [
     popularForTeachers: false,
   },
   {
+    id: 'suno',
+    name: 'Suno AI Music',
+    provider: 'Suno Audio AI',
+    badge: 'Lagu Siap Putar',
+    desc: 'Mengubah prompt & lirik menjadi lagu audio MP3 utuh lengkap vokal dan musik.',
+    url: 'https://suno.com/',
+    iconBg: 'bg-orange-500',
+    popularForTeachers: true,
+  },
+  {
+    id: 'invideo',
+    name: 'InVideo / Video AI',
+    provider: 'AI Video Maker',
+    badge: 'Video Siap Putar',
+    desc: 'Mengubah prompt menjadi video edukasi 1-3 menit lengkap visual, narasi & musik.',
+    url: 'https://ai.invideo.io/',
+    iconBg: 'bg-teal-600',
+    popularForTeachers: true,
+  },
+  {
     id: 'poe',
     name: 'Poe AI',
     provider: 'Quora Poe',
@@ -1126,4 +1146,112 @@ export function buildAutoLearningObjectives(
     },
   ];
 }
+
+export interface GeneralPosterCategoryPreset {
+  id: string;
+  label: string;
+  defaultTitle: string;
+  sampleTopics: string[];
+  suggestedVisualType: string;
+}
+
+export const GENERAL_POSTER_CATEGORIES: GeneralPosterCategoryPreset[] = [
+  {
+    id: 'kampanye',
+    label: 'Kampanye & Edukasi Publik',
+    defaultTitle: '7 Kebiasaan Hidup Bersih, Sehat, dan Bebas Sampah Plastik',
+    sampleTopics: [
+      '7 Kebiasaan Hidup Bersih, Sehat, dan Bebas Sampah Plastik',
+      'Stop Perundungan (Anti-Bullying): Ciptakan Lingkungan Aman & Bersahabat',
+      'Panduan Gizi Seimbang "Isi Piringku" untuk Tubuh Sehat & Cerdas',
+      'Hemat Energi & Air Mulai dari Langkah Kecil Setiap Hari',
+      'Bijak Bermedia Sosial & Aman Berinternet di Era Digital',
+    ],
+    suggestedVisualType: 'Poster Kampanye Edukatif (Lingkungan, Kesehatan, Anti-Perundungan)',
+  },
+  {
+    id: 'acara',
+    label: 'Kegiatan, Lomba & Acara',
+    defaultTitle: 'Semarak Lomba Kreativitas, Literasi & Pentas Seni',
+    sampleTopics: [
+      'Semarak Lomba Kreativitas, Literasi & Pentas Seni',
+      'Peringatan Hari Pendidikan Nasional / Hari Kemerdekaan RI',
+      'Seminar & Workshop Peningkatan Kompetensi Digital',
+      'Gelar Karya, Bazar Kewirausahaan & Pameran Inovasi',
+      'Kegiatan Pesantren Kilat / Bakti Sosial & Peduli Sesama',
+    ],
+    suggestedVisualType: 'Poster Kegiatan, Lomba & Acara Resmi (Event Infografis)',
+  },
+  {
+    id: 'pengumuman',
+    label: 'Pengumuman & PPDB / SPMB',
+    defaultTitle: 'Informasi Penerimaan Murid Baru (SPMB / PPDB) & Alur Pendaftaran',
+    sampleTopics: [
+      'Informasi Penerimaan Murid Baru (SPMB / PPDB) & Alur Pendaftaran',
+      'Alur Layanan Perpustakaan, Peminjaman & Pengembalian Buku',
+      'Jadwal Kegiatan & Tata Cara Mengikuti Ekstrakurikuler',
+      'Pengumuman Pembagian Raport & Pertemuan Orang Tua/Wali',
+    ],
+    suggestedVisualType: 'Poster Pengumuman Resmi & Alur Pendaftaran (PPDB / Layanan)',
+  },
+  {
+    id: 'sop',
+    label: 'Tata Tertib, SOP & Panduan',
+    defaultTitle: 'Panduan Keselamatan, K3 & Tata Tertib Ruang Praktik / Laboratorium',
+    sampleTopics: [
+      'Panduan Keselamatan, K3 & Tata Tertib Ruang Praktik / Laboratorium',
+      '6 Langkah Cuci Tangan Pakai Sabun Menurut Standar Kesehatan',
+      'SOP Mitigasi Bencana Gempa Bumi & Jalur Evakuasi Aman',
+      '5S / 5R Budaya Kerja Rapi, Bersih & Produktif',
+      'Adab & Tata Tertib di Perpustakaan, UKS, Kantin, dan Tempat Ibadah',
+    ],
+    suggestedVisualType: 'Poster Tata Tertib, SOP & Panduan Langkah Praktis (How-To)',
+  },
+  {
+    id: 'motivasi',
+    label: 'Motivasi & Budaya Positif',
+    defaultTitle: 'Kesepakatan Kelas & Budaya Positif: Saling Menghargai dan Bertanggung Jawab',
+    sampleTopics: [
+      'Kesepakatan Kelas & Budaya Positif: Saling Menghargai dan Bertanggung Jawab',
+      '10 Kebiasaan Pagi Pembangun Karakter Disiplin & Mandiri',
+      'Kata-Kata Ajaib Sehari-hari: Maaf, Tolong, Permisi, dan Terima Kasih',
+      'Pola Pikir Bertumbuh (Growth Mindset): Berani Mencoba & Belajar dari Kesalahan',
+    ],
+    suggestedVisualType: 'Poster Kesepakatan Kelas, Budaya Positif & Karakter Pancasila',
+  },
+  {
+    id: 'promosi',
+    label: 'Promosi Karya, Produk & UMKM',
+    defaultTitle: 'Inovasi Produk Kreatif Ramah Lingkungan & Keunggulan Manfaatnya',
+    sampleTopics: [
+      'Inovasi Produk Kreatif Ramah Lingkungan & Keunggulan Manfaatnya',
+      'Katalog Infografis Menu Sehat Bergizi & Kandungan Nutrisinya',
+      'Profil Layanan Unggulan, Fasilitas & Prestasi Lembaga',
+      'Promosi Bazar Kuliner Nusantara & Kerajinan Tangan Kreatif',
+    ],
+    suggestedVisualType: 'Poster Promosi Produk, Karya Kreatif & Keunggulan Infografis',
+  },
+  {
+    id: 'bebas',
+    label: 'Poster Kustom Bebas',
+    defaultTitle: 'Poster Infografis Edukatif & Informatif Sesuai Keinginan',
+    sampleTopics: [
+      'Tips Manajemen Waktu Efektif & Produktif Setiap Hari',
+      'Peta Panduan Wisata Edukasi & Kekayaan Budaya Nusantara',
+      'Langkah Pertolongan Pertama Pada Kecelakaan (P3K Dasar)',
+      'Infografis Perbandingan Manfaat Membaca Buku vs Layar Berlebih',
+    ],
+    suggestedVisualType: 'Poster Edukasi Dinding Kelas (Ukuran A3 / A2)',
+  },
+];
+
+export const GENERAL_POSTER_AUDIENCES: string[] = [
+  'Semua Kalangan / Masyarakat Umum',
+  'Warga Sekolah (Siswa, Guru & Orang Tua)',
+  'Anak-Anak & Keluarga',
+  'Remaja, Pelajar & Mahasiswa',
+  'Komunitas, Organisasi & Instansi',
+  'Pelanggan / Pengunjung Umum',
+];
+
 

@@ -21,6 +21,8 @@ export type TargetAI =
   | 'perplexity' 
   | 'quizizz' 
   | 'gamma' 
+  | 'suno'
+  | 'invideo'
   | 'poe';
 
 export type LkpdActivityType = 
@@ -78,6 +80,12 @@ export interface PromptFormData {
   includeExercises?: string[];
   illustrationStyle?: string;
   modulComponentsList?: string[];
+  visualScope?: 'pembelajaran' | 'umum';
+  customVisualTypeName?: string;
+  generalPosterCategory?: string;
+  generalPosterAudience?: string;
+  generalPosterPoints?: string;
+  generalPosterCta?: string;
   additionalNotes?: string;
 }
 
